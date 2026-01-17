@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Run For Your Life</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --game-bg: #1e1e1e;
+            --accent: #e50914; /* Netflix red style accent */
+            --btn-color: #333;
+            --text: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace; /* Retro arcade feel */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 5px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+        }
+
+        /* --- Game Container --- */
+        #game-wrapper {
+            position: relative;
+            width: 90vw;
+            max-width: 600px;
+            aspect-ratio: 4/3; /* Keeps game rectangular */
+            background-color: var(--game-bg);
+            border: 4px solid #444;
+            border-radius: 4px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* Entities */
+        #player {
+            position: absolute;
+            font-size: 35px;
+            width: 35px;
+            height: 35px;
+            line-height: 35px;
+            text-align: center;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+
+        #enemy {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 15px var(--accent);
+            z-index: 5;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-weight: bold;
+            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* --- Overlays (Start & Game Over) --- */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .title-text {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 0px #fff;
+        }
+
+        button.main-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 2px;
+            box-shadow: 0 4px 0 #8b0000; /* 3D button effect */
+            transition: transform 0.1s;
+        }
+
+        button.main-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* --- Controller Area --- */
+        #controls-wrapper {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .d-pad {
+            display: grid;
+            grid-template-columns: 70px 70px 70px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 5px;
+        }
+
+        .ctrl-btn {
+            background-color: var(--btn-color);
+            border-radius: 8px;
+            border-bottom: 4px solid #111;
+            color: #888;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            border-bottom: 0px solid #111;
+            transform: translateY(4px);
+            background-color: #444;
+            color: var(--accent);
+        }
+
+        /* Positioning buttons in the grid */
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+        /* The middle is empty/spacer */
+
+        .desktop-hint {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        @media (max-height: 700px) {
+            #game-wrapper { height: 50vh; width: auto; aspect-ratio: 4/3; }
+            .d-pad { grid-template-columns: 60px 60px 60px; grid-template-rows: 50px 50px 50px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Don't Get Caught</h1>
+
+    <div id="game-wrapper">
+        <div id="score-board">0.0s</div>
+        
+        <div id="player">👧</div>
+        <img id="enemy" src="https://dqijfes4b84uc.cloudfront.net/customer-images/5970.jpg?w=750&h=undefined&q=75" alt="Enemy">
+
+        <div id="start-screen" class="overlay">
+            <div class="title-text">RUN AWAY!</div>
+            <p style="margin-bottom: 20px; max-width: 80%;">Use buttons or arrow keys to dodge the face.</p>
+            <button class="main-btn" onclick="startGame()">Start Game</button>
+        </div>
+
+        <div id="game-over-screen" class="overlay hidden">
+            <h2 style="color: var(--accent); font-size: 2.5rem; margin: 0;">CAUGHT!</h2>
+            <p id="final-score" style="margin: 20px 0; font-size: 1.2rem;">You survived: 0s</p>
+            <button class="main-btn" onclick="startGame()">Try Again</button>
+        </div>
+    </div>
+
+    <div id="controls-wrapper">
+        <div class="d-pad">
+            <div class="ctrl-btn" id="btn-up">▲</div>
+            <div class="ctrl-btn" id="btn-left">◀</div>
+            <div class="ctrl-btn" id="btn-down">▼</div>
+            <div class="ctrl-btn" id="btn-right">▶</div>
+        </div>
+        <div class="desktop-hint">Keyboard: Arrows or WASD</div>
+    </div>
+
+    <script>
+        // --- Elements ---
+        const player = document.getElementById('player');
+        const enemy = document.getElementById('enemy');
+        const scoreBoard = document.getElementById('score-board');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreText = document.getElementById('final-score');
+
+        // --- Game State ---
+        let isGameRunning = false;
+        let animationFrameId;
+        let startTime;
+        let playerPos = { x: 50, y: 50 }; 
+        let enemyPos = { x: 0, y: 0 };
+        const playerSpeed = 1.3; 
+        let enemySpeed = 0.4; 
+
+        // --- Inputs ---
+        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false };
+
+        // Keyboard Logic
+        document.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+        document.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+        // Touch/Button Logic (With visual feedback)
+        const setupButton = (id, keyName) => {
+            const btn = document.getElementById(id);
+            const activate = (e) => {
+                if(e.cancelable) e.preventDefault();
+                keys[keyName] = true;
+                btn.classList.add('pressed');
+            };
+            const deactivate = (e) => {
+                if(e.cancelable) e.preventDefault();
+                keys[keyName] = false;
+                btn.classList.remove('pressed');
+            };
+
+            // Touch
+            btn.addEventListener('touchstart', activate, {passive: false});
+            btn.addEventListener('touchend', deactivate);
+            // Mouse
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+        };
+
+        setupButton('btn-up', 'ArrowUp');
+        setupButton('btn-down', 'ArrowDown');
+        setupButton('btn-left', 'ArrowLeft');
+        setupButton('btn-right', 'ArrowRight');
+
+        // --- Core Functions ---
+
+        function startGame() {
+            // Reset State
+            playerPos = { x: 50, y: 50 };
+            
+            // Random start corner for enemy
+            const corners = [{x:5,y:5}, {x:90,y:5}, {x:5,y:90}, {x:90,y:90}];
+            enemyPos = corners[Math.floor(Math.random() * corners.length)];
+
+            enemySpeed = 0.4;
+            isGameRunning = true;
+            startTime = Date.now();
+
+            // UI Updates
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            scoreBoard.innerText = "0.0s";
+
+            // Start Loop
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function updatePositions() {
+            // Player Movement
+            if (keys.ArrowUp || keys.w) playerPos.y -= playerSpeed;
+            if (keys.ArrowDown || keys.s) playerPos.y += playerSpeed;
+            if (keys.ArrowLeft || keys.a) {
+                playerPos.x -= playerSpeed;
+                player.style.transform = "scaleX(-1)"; // Face left
+            }
+            if (keys.ArrowRight || keys.d) {
+                playerPos.x += playerSpeed;
+                player.style.transform = "scaleX(1)"; // Face right
+            }
+
+            // Boundary Checks (Keep player inside box)
+            playerPos.x = Math.max(0, Math.min(93, playerPos.x)); // 93% accounts for width
+            playerPos.y = Math.max(0, Math.min(93, playerPos.y));
+
+            // Enemy AI (Chasing)
+            let dx = playerPos.x - enemyPos.x;
+            let dy = playerPos.y - enemyPos.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if(dist > 0) {
+                enemyPos.x += (dx/dist) * enemySpeed;
+                enemyPos.y += (dy/dist) * enemySpeed;
+            }
+
+            // Apply Styles
+            player.style.left = playerPos.x + "%";
+            player.style.top = playerPos.y + "%";
+            enemy.style.left = enemyPos.x + "%";
+            enemy.style.top = enemyPos.y + "%";
+
+            // Ramp up difficulty
+            enemySpeed += 0.0006; 
+        }
+
+        function checkCollision() {
+            // Simple hitbox logic
+            // We use a distance check because they are roughly circular shapes
+            // Note: coordinates are in %, so we approximate collision distance
+            const dx = playerPos.x - enemyPos.x;
+            const dy = playerPos.y - enemyPos.y;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+
+            // If distance is less than roughly 5% of screen width, boom
+            if (distance < 5) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            const time = ((Date.now() - startTime) / 1000).toFixed(1);
+            finalScoreText.innerText = `You survived: ${time}s`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function gameLoop() {
+            if (!isGameRunning) return;
+
+            updatePositions();
+            checkCollision();
+            
+            // Update Score
+            scoreBoard.innerText = ((Date.now() - startTime) / 1000).toFixed(1) + "s";
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+    </script>
+</body>
+</html>
